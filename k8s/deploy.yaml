@@ -1,0 +1,24 @@
+---
+- name: Deploy simu-iso-cs benchmark infrastructure
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - vars/main.yml
+  pre_tasks:
+    - name: Validate required local inputs
+      ansible.builtin.assert:
+        that:
+          - project_id | trim | length > 0
+          - simulator_admin_source_cidr | trim | length > 0
+          - simulator_admin_source_cidr != '0.0.0.0/0'
+          - (primary_cluster_size | int) >= 2
+          - (gke_node_count | int) >= (primary_cluster_size | int)
+          - (hazelcast_native_memory_size_gb | int) >= 4
+        fail_msg: >-
+          Set GCP_PROJECT_ID and SIMULATOR_ADMIN_SOURCE_CIDR (your workstation public IP with /32),
+          and retain at least two members/nodes plus 4 GiB native memory.
+      tags:
+        - always
+  roles:
+    - role: gke
+    - role: hz

@@ -1,0 +1,58 @@
+---
+# GCP location and identity. Environment variables override the demo defaults.
+project_id: "{{ lookup('env', 'GCP_PROJECT_ID') | default('solution-architects-415712', true) }}"
+zone: "{{ lookup('env', 'GCP_ZONE') | default('asia-south1-a', true) }}"
+region: "{{ lookup('env', 'GCP_REGION') | default('asia-south1', true) }}"
+credentials_file: "{{ lookup('env', 'GOOGLE_APPLICATION_CREDENTIALS') | default(lookup('env', 'HOME') + '/gcp/credentials.json', true) }}"
+
+# The SSH rule is deliberately not open to the internet. Example: 203.0.113.10/32.
+simulator_admin_source_cidr: "{{ lookup('env', 'SIMULATOR_ADMIN_SOURCE_CIDR') }}"
+ssh_pub_key_path: "{{ lookup('env', 'ISO_CS_SSH_PUB_KEY') | default(lookup('env', 'HOME') + '/.ssh/id_ed25519.pub', true) }}"
+ssh_private_key_path: "{{ lookup('env', 'ISO_CS_SSH_PRIVATE_KEY') | default(lookup('env', 'HOME') + '/.ssh/id_ed25519', true) }}"
+
+# Dedicated VPC keeps this benchmark independent from simu-dedup.
+# Preserve the deployed GCP resource identity; changing this would create a second cluster.
+cluster_name: "raj-iso-cs"
+network_name: "{{ cluster_name }}-network"
+subnet_cidr: "172.18.0.0/16"
+gke_pod_range_name: "{{ cluster_name }}-pods"
+gke_pod_cidr: "10.20.0.0/16"
+gke_service_range_name: "{{ cluster_name }}-services"
+gke_service_cidr: "10.21.0.0/20"
+gke_node_count: 3
+gke_node_machine_type: "c2-standard-8"
+gke_node_disk_size_gb: 30
+gke_node_disk_type: "pd-balanced"
+
+# One Simulator worker is the default one-file-per-second benchmark source.
+client_machine_name: "raj-iso-cs-client"
+client_machine_count: 1
+client_machine_type: "c2-standard-8"
+client_machine_username: "ubuntu"
+
+# Hazelcast Enterprise Helm deployment.
+hazelcast_namespace: "default"
+primary_cluster_size: 3
+hazelcast_helm_release_name: "hz-primary"
+hazelcast_helm_chart_version: "5.15.0"
+hazelcast_version: "5.7.0"
+hazelcast_mc_version: "5.11.0"
+hazelcast_kubectl_image: "alpine/k8s:1.33.4"
+hazelcast_license_secret_name: "hazelcast-license"
+hazelcast_license_file: "{{ lookup('env', 'HAZELCAST_LICENSE_FILE') | default(lookup('env', 'HOME') + '/hazelcast/demo.license', true) }}"
+
+hazelcast_cpu_request: "4"
+hazelcast_memory_request: "20Gi"
+hazelcast_memory_limit: "20Gi"
+hazelcast_jvm_heap: "4g"
+hazelcast_native_memory_size_gb: 12
+hazelcast_native_memory_min_block_size: 16
+hazelcast_native_memory_page_size: 4194304
+hazelcast_native_memory_metadata_space_percentage: 12.5
+
+management_center_cpu_request: "1"
+management_center_memory_request: "3Gi"
+management_center_jvm_heap: "2g"
+
+pain001_map_pattern: "pain001-files-*"
+pain001_backup_count: 1

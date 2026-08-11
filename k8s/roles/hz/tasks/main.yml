@@ -1,0 +1,144 @@
+---
+- name: Add Hazelcast Helm repository
+  kubernetes.core.helm_repository:
+    name: hazelcast
+    repo_url: https://hazelcast-charts.s3.amazonaws.com/
+    force_update: true
+  tags: [hz, hz-init]
+
+- name: Check configured Hazelcast license file
+  ansible.builtin.stat:
+    path: "{{ hazelcast_license_file }}"
+  register: hazelcast_license_file_stat
+  tags: [hz, hz-init]
+
+- name: Validate Hazelcast Enterprise license source
+  ansible.builtin.assert:
+    that:
+      - lookup('env', 'HAZELCAST_LICENSE_KEY') | trim | length > 0 or hazelcast_license_file_stat.stat.exists
+    fail_msg: >-
+      Set HAZELCAST_LICENSE_KEY or create {{ hazelcast_license_file }} before deploying NATIVE storage.
+  tags: [hz, hz-init]
+
+- name: Load Hazelcast Enterprise license
+  ansible.builtin.set_fact:
+    hazelcast_license_key: >-
+      {{ (lookup('env', 'HAZELCAST_LICENSE_KEY') | trim)
+         if (lookup('env', 'HAZELCAST_LICENSE_KEY') | trim | length > 0)
+         else (lookup('file', hazelcast_license_file) | trim) }}
+  no_log: true
+  tags: [hz, hz-init]
+
+- name: Create Hazelcast license secret
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "{{ hazelcast_license_secret_name }}"
+        namespace: "{{ hazelcast_namespace }}"
+      type: Opaque
+      stringData:
+        key: "{{ hazelcast_license_key }}"
+  no_log: true
+  tags: [hz, hz-init]
+
+- name: Install Hazelcast Enterprise and Management Center
+  kubernetes.core.helm:
+    name: "{{ hazelcast_helm_release_name }}"
+    chart_ref: hazelcast/hazelcast-enterprise
+    chart_version: "{{ hazelcast_helm_chart_version }}"
+    release_namespace: "{{ hazelcast_namespace }}"
+    create_namespace: false
+    values: "{{ lookup('template', 'hazelcast-values.yml.j2') | from_yaml }}"
+    wait: true
+    wait_timeout: 15m
+  tags: [hz, maps, mc]
+
+- name: Wait for Hazelcast members
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - rollout
+      - status
+      - "statefulset/{{ hazelcast_helm_release_name }}"
+      - "--namespace={{ hazelcast_namespace }}"
+      - --timeout=900s
+  changed_when: false
+  tags: [hz, maps]
+
+- name: Wait for Management Center
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - wait
+      - --for=condition=ready
+      - "pod/{{ hazelcast_helm_release_name }}-mancenter-0"
+      - "--namespace={{ hazelcast_namespace }}"
+      - --timeout=600s
+  changed_when: false
+  tags: [hz, mc]
+
+- name: Wait for member internal load-balancer addresses
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - wait
+      - "--for=jsonpath={.status.loadBalancer.ingress[0].ip}"
+      - "service/{{ hazelcast_helm_release_name }}-{{ item }}"
+      - "--namespace={{ hazelcast_namespace }}"
+      - --timeout=600s
+  loop: "{{ range(0, primary_cluster_size | int) | list }}"
+  changed_when: false
+  tags: [hz, client-config]
+
+- name: Read member internal load-balancer addresses
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - get
+      - service
+      - "{{ hazelcast_helm_release_name }}-{{ item }}"
+      - "--namespace={{ hazelcast_namespace }}"
+      - "--output=jsonpath={.status.loadBalancer.ingress[0].ip}"
+  loop: "{{ range(0, primary_cluster_size | int) | list }}"
+  register: hazelcast_member_address_results
+  changed_when: false
+  tags: [hz, client-config]
+
+- name: Collect member addresses
+  ansible.builtin.set_fact:
+    hazelcast_member_addresses: >-
+      {{ hazelcast_member_address_results.results | map(attribute='stdout') | map('trim') | reject('equalto', '') | list }}
+  tags: [hz, client-config]
+
+- name: Validate member addresses
+  ansible.builtin.assert:
+    that:
+      - hazelcast_member_addresses | length == primary_cluster_size | int
+    fail_msg: "GKE did not assign an internal load-balancer address to every Hazelcast member."
+  tags: [hz, client-config]
+
+- name: Render Simulator Hazelcast client configurations
+  ansible.builtin.template:
+    src: client-hazelcast.xml.j2
+    dest: "{{ playbook_dir }}/../{{ item.file }}"
+    mode: "0644"
+  vars:
+    explicit_compact_serializers: "{{ item.explicit }}"
+  loop:
+    - file: client-hazelcast.xml
+      explicit: false
+    - file: client-hazelcast-explicit.xml
+      explicit: true
+  tags: [hz, client-config]
+
+- name: Show deployment handoff
+  ansible.builtin.debug:
+    msg:
+      - "Hazelcast members: {{ hazelcast_member_addresses | join(', ') }}"
+      - "Simulator load generators: {{ simulator_client_public_addresses | join(', ') }}"
+      - "Rendered client-hazelcast.xml (no-code) and client-hazelcast-explicit.xml (explicit)."
+      - "Run the inventory install steps and then one of the four pain001_*_tests.yaml suites."
+  tags: [hz, client-config]

@@ -1,0 +1,251 @@
+---
+- name: Check GCP service-account key
+  ansible.builtin.stat:
+    path: "{{ credentials_file }}"
+  register: gcp_credentials
+  tags: [gke, gke-init]
+
+- name: Check Simulator SSH public key
+  ansible.builtin.stat:
+    path: "{{ ssh_pub_key_path }}"
+  register: simulator_ssh_public_key
+  tags: [gke, client, gke-init]
+
+- name: Check Simulator SSH private key
+  ansible.builtin.stat:
+    path: "{{ ssh_private_key_path }}"
+  register: simulator_ssh_private_key
+  tags: [gke, client, gke-init]
+
+- name: Validate local GCP and SSH files
+  ansible.builtin.assert:
+    that:
+      - gcp_credentials.stat.exists
+      - simulator_ssh_public_key.stat.exists
+      - simulator_ssh_private_key.stat.exists
+    fail_msg: >-
+      Expected GCP credentials at {{ credentials_file }}, an SSH public key at {{ ssh_pub_key_path }},
+      and its private key at {{ ssh_private_key_path }}. Set GOOGLE_APPLICATION_CREDENTIALS,
+      ISO_CS_SSH_PUB_KEY, and ISO_CS_SSH_PRIVATE_KEY to override them.
+  tags: [gke, client, gke-init]
+
+- name: Authorize gcloud with the service account
+  ansible.builtin.command:
+    argv:
+      - gcloud
+      - auth
+      - activate-service-account
+      - "--key-file={{ credentials_file }}"
+  changed_when: false
+  no_log: true
+  tags: [gke, client, gke-init]
+
+- name: Create benchmark VPC
+  google.cloud.gcp_compute_network:
+    name: "{{ network_name }}"
+    project: "{{ project_id }}"
+    auth_kind: serviceaccount
+    service_account_file: "{{ credentials_file }}"
+    auto_create_subnetworks: false
+    state: present
+  register: benchmark_network
+  tags: [gke, network]
+
+- name: Create benchmark subnet
+  google.cloud.gcp_compute_subnetwork:
+    name: "{{ network_name }}"
+    project: "{{ project_id }}"
+    auth_kind: serviceaccount
+    service_account_file: "{{ credentials_file }}"
+    region: "{{ region }}"
+    network: "{{ benchmark_network }}"
+    ip_cidr_range: "{{ subnet_cidr }}"
+    secondary_ip_ranges:
+      - range_name: "{{ gke_pod_range_name }}"
+        ip_cidr_range: "{{ gke_pod_cidr }}"
+      - range_name: "{{ gke_service_range_name }}"
+        ip_cidr_range: "{{ gke_service_cidr }}"
+    state: present
+  register: benchmark_subnet
+  tags: [gke, network]
+
+- name: Allow SSH and Simulator control traffic from the operator workstation
+  google.cloud.gcp_compute_firewall:
+    name: "{{ cluster_name }}-simulator"
+    project: "{{ project_id }}"
+    auth_kind: serviceaccount
+    service_account_file: "{{ credentials_file }}"
+    network: "{{ benchmark_network }}"
+    allowed:
+      - ip_protocol: tcp
+        ports:
+          - "22"
+          - "9000-9001"
+          - "11000-12000"
+    source_ranges:
+      - "{{ simulator_admin_source_cidr }}"
+    target_tags:
+      - simulator-access
+    state: present
+  tags: [gke, client, firewall, network]
+
+- name: Create Simulator load-generator VMs
+  google.cloud.gcp_compute_instance:
+    name: "{{ client_machine_name }}-{{ item }}"
+    project: "{{ project_id }}"
+    auth_kind: serviceaccount
+    service_account_file: "{{ credentials_file }}"
+    zone: "{{ zone }}"
+    machine_type: "{{ client_machine_type }}"
+    disks:
+      - boot: true
+        auto_delete: true
+        initialize_params:
+          image: projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts
+          disk_size_gb: 30
+          disk_type: pd-balanced
+    network_interfaces:
+      - network: "{{ benchmark_network }}"
+        subnetwork: "{{ benchmark_subnet }}"
+        access_configs:
+          - name: External NAT
+            type: ONE_TO_ONE_NAT
+    tags:
+      items:
+        - simulator-access
+    metadata:
+      ssh-keys: "{{ client_machine_username }}:{{ lookup('file', ssh_pub_key_path) }}"
+    state: present
+  loop: "{{ range(1, (client_machine_count | int) + 1) | list }}"
+  loop_control:
+    label: "{{ client_machine_name }}-{{ item }}"
+  tags: [gke, client, vm]
+
+- name: Create the GKE control plane
+  google.cloud.gcp_container_cluster:
+    name: "{{ cluster_name }}"
+    project: "{{ project_id }}"
+    auth_kind: serviceaccount
+    service_account_file: "{{ credentials_file }}"
+    zone: "{{ zone }}"
+    network: "{{ network_name }}"
+    subnetwork: "{{ network_name }}"
+    ip_allocation_policy:
+      use_ip_aliases: true
+      cluster_secondary_range_name: "{{ gke_pod_range_name }}"
+      services_secondary_range_name: "{{ gke_service_range_name }}"
+    # The google.cloud module removes this temporary default pool after creating the cluster.
+    # A persistent benchmark pool is therefore created explicitly below.
+    initial_node_count: 1
+    resource_labels:
+      workload: simu-iso-cs
+      keep: 1d
+    state: present
+  register: benchmark_cluster
+  tags: [gke, cluster]
+
+- name: Create persistent GKE benchmark node pool
+  google.cloud.gcp_container_node_pool:
+    name: "{{ cluster_name }}-node-pool"
+    project: "{{ project_id }}"
+    auth_kind: serviceaccount
+    service_account_file: "{{ credentials_file }}"
+    location: "{{ zone }}"
+    cluster: "{{ benchmark_cluster }}"
+    initial_node_count: "{{ gke_node_count | int }}"
+    config:
+      machine_type: "{{ gke_node_machine_type }}"
+      disk_size_gb: "{{ gke_node_disk_size_gb | int }}"
+      disk_type: "{{ gke_node_disk_type }}"
+      labels:
+        workload: simu-iso-cs
+    management:
+      auto_repair: true
+      auto_upgrade: true
+    state: present
+  register: benchmark_node_pool
+  tags: [gke, cluster]
+
+- name: Get GKE credentials
+  ansible.builtin.command:
+    argv:
+      - gcloud
+      - container
+      - clusters
+      - get-credentials
+      - "{{ cluster_name }}"
+      - "--zone={{ zone }}"
+      - "--project={{ project_id }}"
+  changed_when: false
+  tags: [gke, cluster]
+
+- name: Wait for persistent GKE nodes to register
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - get
+      - nodes
+      - --output=name
+  register: registered_gke_nodes
+  changed_when: false
+  until: (registered_gke_nodes.stdout_lines | length) == (gke_node_count | int)
+  retries: 60
+  delay: 10
+  tags: [gke, cluster]
+
+- name: Wait for all GKE nodes to become ready
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - wait
+      - --for=condition=Ready
+      - nodes
+      - --all
+      - --timeout=600s
+  changed_when: false
+  tags: [gke, cluster]
+
+- name: Read load-generator public addresses
+  ansible.builtin.command:
+    argv:
+      - gcloud
+      - compute
+      - instances
+      - describe
+      - "{{ client_machine_name }}-{{ item }}"
+      - "--project={{ project_id }}"
+      - "--zone={{ zone }}"
+      - "--format=value(networkInterfaces[0].accessConfigs[0].natIP)"
+  loop: "{{ range(1, (client_machine_count | int) + 1) | list }}"
+  register: simulator_client_address_results
+  changed_when: false
+  tags: [gke, client, inventory]
+
+- name: Collect load-generator public addresses
+  ansible.builtin.set_fact:
+    simulator_client_public_addresses: >-
+      {{ simulator_client_address_results.results | map(attribute='stdout') | map('trim') | reject('equalto', '') | list }}
+  tags: [gke, client, inventory]
+
+- name: Validate load-generator addresses
+  ansible.builtin.assert:
+    that:
+      - simulator_client_public_addresses | length == client_machine_count | int
+    fail_msg: "GCP did not return a public address for every Simulator load-generator VM."
+  tags: [gke, client, inventory]
+
+- name: Wait for SSH on load-generator VMs
+  ansible.builtin.wait_for:
+    host: "{{ item }}"
+    port: 22
+    timeout: 300
+    connect_timeout: 10
+  loop: "{{ simulator_client_public_addresses }}"
+  tags: [gke, client, inventory]
+
+- name: Render Simulator inventory
+  ansible.builtin.template:
+    src: inventory.yaml.j2
+    dest: "{{ playbook_dir }}/../inventory.yaml"
+    mode: "0600"
+  tags: [gke, client, inventory]

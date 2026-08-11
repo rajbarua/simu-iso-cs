@@ -1,0 +1,145 @@
+fullnameOverride: {{ hazelcast_helm_release_name }}
+
+image:
+  repository: hazelcast/hazelcast-enterprise
+  tag: {{ hazelcast_version | quote }}
+  pullPolicy: IfNotPresent
+
+cluster:
+  memberCount: {{ primary_cluster_size | int }}
+
+resources:
+  requests:
+    cpu: {{ hazelcast_cpu_request | quote }}
+    memory: {{ hazelcast_memory_request }}
+  limits:
+    memory: {{ hazelcast_memory_limit }}
+
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+            - key: app.kubernetes.io/name
+              operator: In
+              values:
+                - hazelcast-enterprise
+            - key: role
+              operator: In
+              values:
+                - hazelcast
+        topologyKey: kubernetes.io/hostname
+
+hazelcast:
+  licenseKeySecretName: {{ hazelcast_license_secret_name }}
+  javaOpts: >-
+    -Xms{{ hazelcast_jvm_heap }}
+    -Xmx{{ hazelcast_jvm_heap }}
+    -XX:+UseG1GC
+    -Xlog:gc*
+  yaml:
+    hazelcast:
+      cluster-name: {{ hazelcast_helm_release_name }}
+      network:
+        join:
+          multicast:
+            enabled: false
+          kubernetes:
+            enabled: true
+            service-name: ${serviceName}
+            namespace: ${namespace}
+            expose-externally: true
+            service-per-pod-label-name: com.hazelcast/external-access
+            service-per-pod-label-value: "true"
+        rest-api:
+          enabled: true
+      properties:
+        hazelcast.slow.operation.detector.enabled: true
+        hazelcast.shutdownhook.policy: GRACEFUL
+      persistence:
+        enabled: false
+      native-memory:
+        enabled: true
+        allocator-type: POOLED
+        capacity:
+          unit: GIGABYTES
+          value: {{ hazelcast_native_memory_size_gb | int }}
+        min-block-size: {{ hazelcast_native_memory_min_block_size | int }}
+        page-size: {{ hazelcast_native_memory_page_size | int }}
+        metadata-space-percentage: {{ hazelcast_native_memory_metadata_space_percentage }}
+      serialization:
+        compact-serialization: {}
+      map:
+        {{ pain001_map_pattern | quote }}:
+          backup-count: {{ pain001_backup_count | int }}
+          in-memory-format: NATIVE
+
+jet:
+  enabled: false
+
+externalAccess:
+  enabled: true
+  service:
+    type: LoadBalancer
+    annotations:
+      networking.gke.io/load-balancer-type: Internal
+    labels:
+      com.hazelcast/external-access: "true"
+    loadBalancerSourceRanges:
+      - {{ subnet_cidr | quote }}
+
+initContainers:
+  - name: wait-for-member-load-balancer
+    image: {{ hazelcast_kubectl_image }}
+    imagePullPolicy: IfNotPresent
+    command:
+      - /bin/sh
+      - -ec
+    args:
+      - |
+        until address="$(kubectl get service "${POD_NAME}" -n "${POD_NAMESPACE}" -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)" && [ -n "${address}" ]; do
+          sleep 8
+        done
+    env:
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.name
+      - name: POD_NAMESPACE
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.namespace
+
+mancenter:
+  enabled: true
+  image:
+    repository: hazelcast/management-center
+    tag: {{ hazelcast_mc_version | quote }}
+    pullPolicy: IfNotPresent
+  licenseKeySecretName: {{ hazelcast_license_secret_name }}
+  javaOpts: >-
+    -Dhazelcast.mc.port=8080
+    -Xms{{ management_center_jvm_heap }}
+    -Xmx{{ management_center_jvm_heap }}
+  resources:
+    requests:
+      cpu: {{ management_center_cpu_request | quote }}
+      memory: {{ management_center_memory_request }}
+  persistence:
+    enabled: false
+  service:
+    type: ClusterIP
+    port: 8080
+  yaml:
+    hazelcast-client:
+      cluster-name: {{ hazelcast_helm_release_name }}
+      network:
+        kubernetes:
+          enabled: true
+          service-name: ${serviceName}
+          namespace: ${namespace}
+  clusterConfig:
+    create: true
+
+test:
+  enabled: false

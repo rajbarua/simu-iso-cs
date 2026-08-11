@@ -1,0 +1,183 @@
+---
+- name: Remove simu-iso-cs benchmark infrastructure
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - vars/main.yml
+  tasks:
+    - name: Authorize gcloud with the service account
+      ansible.builtin.command:
+        argv:
+          - gcloud
+          - auth
+          - activate-service-account
+          - "--key-file={{ credentials_file }}"
+      changed_when: false
+      no_log: true
+      tags: [undeploy, gke]
+
+    - name: Check whether the GKE cluster exists
+      ansible.builtin.command:
+        argv:
+          - gcloud
+          - container
+          - clusters
+          - describe
+          - "{{ cluster_name }}"
+          - "--zone={{ zone }}"
+          - "--project={{ project_id }}"
+          - --format=value(name)
+      register: gke_cluster_describe
+      changed_when: false
+      failed_when: false
+      tags: [undeploy, gke]
+
+    - name: Track GKE cluster existence
+      ansible.builtin.set_fact:
+        gke_cluster_exists: "{{ gke_cluster_describe.rc == 0 }}"
+      tags: [undeploy, gke]
+
+    - name: Get GKE credentials before uninstalling Helm
+      ansible.builtin.command:
+        argv:
+          - gcloud
+          - container
+          - clusters
+          - get-credentials
+          - "{{ cluster_name }}"
+          - "--zone={{ zone }}"
+          - "--project={{ project_id }}"
+      changed_when: false
+      when: gke_cluster_exists
+      tags: [undeploy, gke, hz]
+
+    - name: Uninstall Hazelcast Enterprise and Management Center
+      kubernetes.core.helm:
+        name: "{{ hazelcast_helm_release_name }}"
+        release_namespace: "{{ hazelcast_namespace }}"
+        state: absent
+        wait: true
+        wait_timeout: 10m
+      when: gke_cluster_exists
+      tags: [undeploy, hz]
+
+    - name: Delete GKE cluster
+      ansible.builtin.command:
+        argv:
+          - gcloud
+          - container
+          - clusters
+          - delete
+          - "{{ cluster_name }}"
+          - "--zone={{ zone }}"
+          - "--project={{ project_id }}"
+          - --quiet
+      register: delete_gke_cluster
+      changed_when: delete_gke_cluster.rc == 0
+      when: gke_cluster_exists
+      tags: [undeploy, gke, cluster]
+
+    - name: Delete Simulator load-generator VMs
+      ansible.builtin.command:
+        argv:
+          - gcloud
+          - compute
+          - instances
+          - delete
+          - "{{ client_machine_name }}-{{ item }}"
+          - "--zone={{ zone }}"
+          - "--project={{ project_id }}"
+          - --quiet
+      loop: "{{ range(1, (client_machine_count | int) + 1) | list }}"
+      register: delete_client_vm
+      changed_when: delete_client_vm.rc == 0
+      failed_when: >-
+        delete_client_vm.rc not in [0, 1] or
+        (delete_client_vm.rc == 1 and 'not found' not in
+         (((delete_client_vm.stdout | default('')) ~ (delete_client_vm.stderr | default(''))) | lower))
+      tags: [undeploy, gke, client]
+
+    - name: Delete Simulator firewall rule
+      ansible.builtin.command:
+        argv:
+          - gcloud
+          - compute
+          - firewall-rules
+          - delete
+          - "{{ cluster_name }}-simulator"
+          - "--project={{ project_id }}"
+          - --quiet
+      register: delete_simulator_firewall
+      changed_when: delete_simulator_firewall.rc == 0
+      failed_when: >-
+        delete_simulator_firewall.rc not in [0, 1] or
+        (delete_simulator_firewall.rc == 1 and 'not found' not in
+         (((delete_simulator_firewall.stdout | default('')) ~ (delete_simulator_firewall.stderr | default(''))) | lower))
+      tags: [undeploy, gke, network]
+
+    - name: Find residual GKE firewall rules on the benchmark VPC
+      ansible.builtin.command:
+        argv:
+          - gcloud
+          - compute
+          - firewall-rules
+          - list
+          - "--project={{ project_id }}"
+          - "--filter=network:{{ network_name }}"
+          - --format=value(name)
+      register: residual_firewall_rules
+      changed_when: false
+      tags: [undeploy, gke, network]
+
+    - name: Delete residual GKE firewall rules
+      ansible.builtin.command:
+        argv:
+          - gcloud
+          - compute
+          - firewall-rules
+          - delete
+          - "{{ item }}"
+          - "--project={{ project_id }}"
+          - --quiet
+      loop: "{{ residual_firewall_rules.stdout_lines | default([]) }}"
+      register: delete_residual_firewall
+      changed_when: delete_residual_firewall.rc == 0
+      tags: [undeploy, gke, network]
+
+    - name: Delete benchmark subnet
+      ansible.builtin.command:
+        argv:
+          - gcloud
+          - compute
+          - networks
+          - subnets
+          - delete
+          - "{{ network_name }}"
+          - "--region={{ region }}"
+          - "--project={{ project_id }}"
+          - --quiet
+      register: delete_benchmark_subnet
+      changed_when: delete_benchmark_subnet.rc == 0
+      failed_when: >-
+        delete_benchmark_subnet.rc not in [0, 1] or
+        (delete_benchmark_subnet.rc == 1 and 'not found' not in
+         (((delete_benchmark_subnet.stdout | default('')) ~ (delete_benchmark_subnet.stderr | default(''))) | lower))
+      tags: [undeploy, gke, network]
+
+    - name: Delete benchmark VPC
+      ansible.builtin.command:
+        argv:
+          - gcloud
+          - compute
+          - networks
+          - delete
+          - "{{ network_name }}"
+          - "--project={{ project_id }}"
+          - --quiet
+      register: delete_benchmark_network
+      changed_when: delete_benchmark_network.rc == 0
+      failed_when: >-
+        delete_benchmark_network.rc not in [0, 1] or
+        (delete_benchmark_network.rc == 1 and 'not found' not in
+         (((delete_benchmark_network.stdout | default('')) ~ (delete_benchmark_network.stderr | default(''))) | lower))
+      tags: [undeploy, gke, network]

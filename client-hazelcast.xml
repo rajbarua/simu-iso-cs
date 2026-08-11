@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hazelcast-client
+        xsi:schemaLocation="http://www.hazelcast.com/schema/client-config
+            http://www.hazelcast.com/schema/config/hazelcast-client-config-5.7.xsd"
+        xmlns="http://www.hazelcast.com/schema/client-config"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <cluster-name>hz-primary</cluster-name>
+    <network>
+        <cluster-members>
+            <address>172.18.0.7</address>
+            <address>172.18.0.8</address>
+            <address>172.18.0.9</address>
+        </cluster-members>
+        <cluster-routing mode="ALL_MEMBERS"/>
+        <redo-operation>true</redo-operation>
+    </network>
+    <properties>
+        <property name="hazelcast.logging.type">log4j2</property>
+        <property name="hazelcast.client.heartbeat.interval">5000</property>
+        <property name="hazelcast.client.heartbeat.timeout">60000</property>
+        <property name="hazelcast.client.invocation.retry.pause.millis">250</property>
+        <property name="hazelcast.client.invocation.timeout.seconds">120</property>
+    </properties>
+    <serialization>
+        <compact-serialization/>
+    </serialization>
+    <connection-strategy async-start="false" reconnect-mode="ON">
+        <connection-retry>
+            <initial-backoff-millis>200</initial-backoff-millis>
+            <max-backoff-millis>10000</max-backoff-millis>
+            <multiplier>1.5</multiplier>
+            <cluster-connect-timeout-millis>30000</cluster-connect-timeout-millis>
+            <jitter>0.2</jitter>
+        </connection-retry>
+    </connection-strategy>
+</hazelcast-client>
+

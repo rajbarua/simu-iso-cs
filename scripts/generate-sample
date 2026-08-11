@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+cd "${repo_dir}"
+java src/main/java/com/hazelcast/isocs/xml/Pain001SampleGenerator.java \
+  --transactions 150000 \
+  --payment-infos 2000 \
+  --target-mib 180 \
+  --output src/main/resources/samples/pain001-150k-2k-180MiB.xml.gz
+

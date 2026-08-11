@@ -1,0 +1,10 @@
+target/
+runs/
+logs/
+.DS_Store
+.idea/
+.vscode/
+*.class
+*.jfr
+inventory.yaml
+

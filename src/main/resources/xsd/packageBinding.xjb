@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jaxb:bindings version="3.0"
+               xmlns:jaxb="https://jakarta.ee/xml/ns/jaxb"
+               xmlns:xjc="http://java.sun.com/xml/ns/jaxb/xjc"
+               xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <jaxb:globalBindings>
+        <xjc:javaType name="java.time.OffsetDateTime"
+                      xmlType="xs:dateTime"
+                      adapter="com.hz.demo.pmt.OffsetDateTimeTypeAdapter"/>
+        <xjc:javaType name="java.time.OffsetDateTime"
+                      xmlType="xs:date"
+                      adapter="com.hz.demo.pmt.OffsetDateTimeTypeAdapter"/>
+        <xjc:javaType name="java.time.OffsetDateTime"
+                      xmlType="xs:time"
+                      adapter="com.hz.demo.pmt.OffsetDateTimeTypeAdapter"/>
+    </jaxb:globalBindings>
+    <jaxb:bindings schemaLocation="pain.001.001.03.xsd" node="//xs:schema">
+        <jaxb:schemaBindings>
+            <jaxb:package name="com.hz.demo.pmt.pain001_03"/>
+        </jaxb:schemaBindings>
+    </jaxb:bindings>
+</jaxb:bindings>
+

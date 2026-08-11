@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hazelcast-client
+        xsi:schemaLocation="http://www.hazelcast.com/schema/client-config
+            http://www.hazelcast.com/schema/config/hazelcast-client-config-5.7.xsd"
+        xmlns="http://www.hazelcast.com/schema/client-config"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <cluster-name>hz-primary</cluster-name>
+    <network>
+        <cluster-members>
+            <address>172.18.0.7</address>
+            <address>172.18.0.8</address>
+            <address>172.18.0.9</address>
+        </cluster-members>
+        <cluster-routing mode="ALL_MEMBERS"/>
+        <redo-operation>true</redo-operation>
+    </network>
+    <properties>
+        <property name="hazelcast.logging.type">log4j2</property>
+        <property name="hazelcast.client.heartbeat.interval">5000</property>
+        <property name="hazelcast.client.heartbeat.timeout">60000</property>
+        <property name="hazelcast.client.invocation.retry.pause.millis">250</property>
+        <property name="hazelcast.client.invocation.timeout.seconds">120</property>
+    </properties>
+    <serialization>
+        <compact-serialization>
+            <serializers>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$AccountIdentification4ChoiceCS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$AccountSchemeName1ChoiceCS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$ActiveOrHistoricCurrencyAndAmountCS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$AmountType3ChoiceCS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$Authorisation1ChoiceCS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$BranchAndFinancialInstitutionIdentification4CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$BranchData2CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$CashAccount16CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$CashAccountType2CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$CategoryPurpose1ChoiceCS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$Cheque6CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$ChequeDeliveryMethod1ChoiceCS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$ClearingSystemIdentification2ChoiceCS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$ClearingSystemMemberIdentification2CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$ContactDetails2CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$CreditTransferTransactionInformation10CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$CreditorReferenceInformation2CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$CreditorReferenceType1ChoiceCS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$CreditorReferenceType2CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$CustomerCreditTransferInitiationV03CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$DateAndPlaceOfBirthCS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$DatePeriodDetailsCS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$DocumentCS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$DocumentAdjustment1CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$EquivalentAmount2CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$ExchangeRateInformation1CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$FinancialIdentificationSchemeName1ChoiceCS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$FinancialInstitutionIdentification7CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$GenericAccountIdentification1CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$GenericFinancialIdentification1CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$GenericOrganisationIdentification1CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$GenericPersonIdentification1CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$GroupHeader32CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$InstructionForCreditorAgent1CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$LocalInstrument2ChoiceCS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$NameAndAddress10CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$OrganisationIdentification4CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$OrganisationIdentificationSchemeName1ChoiceCS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$Party6ChoiceCS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$PartyIdentification32CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$PaymentIdentification1CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$PaymentInstructionInformation3CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$PaymentTypeInformation19CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$PersonIdentification5CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$PersonIdentificationSchemeName1ChoiceCS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$PostalAddress6CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$Purpose2ChoiceCS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$ReferredDocumentInformation3CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$ReferredDocumentType1ChoiceCS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$ReferredDocumentType2CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$RegulatoryAuthority2CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$RegulatoryReporting3CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$RemittanceAmount1CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$RemittanceInformation5CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$RemittanceLocation2CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$ServiceLevel8ChoiceCS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$StructuredRegulatoryReporting3CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$StructuredRemittanceInformation7CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$TaxAmount1CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$TaxAuthorisation1CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$TaxInformation3CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$TaxParty1CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$TaxParty2CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$TaxPeriod1CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$TaxRecord1CS</serializer>
+                <serializer>com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers$TaxRecordDetails1CS</serializer>
+            </serializers>
+        </compact-serialization>
+    </serialization>
+    <connection-strategy async-start="false" reconnect-mode="ON">
+        <connection-retry>
+            <initial-backoff-millis>200</initial-backoff-millis>
+            <max-backoff-millis>10000</max-backoff-millis>
+            <multiplier>1.5</multiplier>
+            <cluster-connect-timeout-millis>30000</cluster-connect-timeout-millis>
+            <jitter>0.2</jitter>
+        </connection-retry>
+    </connection-strategy>
+</hazelcast-client>
+
