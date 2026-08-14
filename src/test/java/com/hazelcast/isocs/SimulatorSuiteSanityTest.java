@@ -36,7 +36,8 @@ class SimulatorSuiteSanityTest {
 
     @Test
     void writeSuitesBindAndCompleteOneSmallLifecycle() throws Exception {
-        for (String suite : List.of("pain001_nocode_write_tests.yaml", "pain001_explicit_write_tests.yaml")) {
+        for (String suite : List.of("pain001_nocode_write_tests.yaml", "pain001_explicit_write_tests.yaml",
+                "pain001_reflective_write_tests.yaml")) {
             TestCase testCase = loadTestCase(suite);
             assertEquals(Pain001WriteBenchmark.class.getName(), testCase.getClassname());
             assertEquals("6", testCase.getProperty("threadCount"));
@@ -46,7 +47,8 @@ class SimulatorSuiteSanityTest {
 
     @Test
     void readSuitesBindAndCompleteOneSmallLifecycle() throws Exception {
-        for (String suite : List.of("pain001_nocode_read_tests.yaml", "pain001_explicit_read_tests.yaml")) {
+        for (String suite : List.of("pain001_nocode_read_tests.yaml", "pain001_explicit_read_tests.yaml",
+                "pain001_reflective_read_tests.yaml")) {
             TestCase testCase = loadTestCase(suite);
             assertEquals(Pain001ReadBenchmark.class.getName(), testCase.getClassname());
             assertEquals("8", testCase.getProperty("threadCount"));
@@ -146,8 +148,10 @@ class SimulatorSuiteSanityTest {
         assertEquals(1, ((Number) suite.get("loadgenerator_count")).intValue());
         String suiteName = suite.get("name").toString();
         String clientConfig = suite.get("client_hazelcast_xml").toString();
-        assertTrue(clientConfig.endsWith(suiteName.contains("explicit")
-                ? "client-hazelcast-explicit.xml" : "client-hazelcast.xml"));
+        String expectedClientConfig = suiteName.contains("reflective")
+                ? "client-hazelcast-reflective.xml"
+                : suiteName.contains("explicit") ? "client-hazelcast-explicit.xml" : "client-hazelcast.xml";
+        assertTrue(clientConfig.endsWith(expectedClientConfig));
 
         List<Map<String, Object>> tests = (List<Map<String, Object>>) suite.get("test");
         assertEquals(1, tests.size());

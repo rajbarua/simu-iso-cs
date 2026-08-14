@@ -19,7 +19,7 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Explicit Compact serializer used by the pain.001 benchmark.
+ * Diagnostic explicitly registered Compact serializer that still uses reflective field access.
  *
  * <p>The field plan is built once when the serializer is registered. Unlike Hazelcast's no-code
  * serializer in 5.7.0, each non-primitive field is read exactly once. Concrete no-argument
@@ -27,7 +27,7 @@ import java.util.List;
  * to no-code Compact serialization.</p>
  */
 public abstract class ReflectivePain001CompactSerializer<T> implements CompactSerializer<T> {
-    static final String TYPE_NAME_PREFIX = "simu-iso-cs.explicit.";
+    static final String TYPE_NAME_PREFIX = "simu-iso-cs.reflective.";
 
     private final Class<T> compactClass;
     private final Constructor<T> constructor;

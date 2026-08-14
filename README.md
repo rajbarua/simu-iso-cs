@@ -1,15 +1,21 @@
 # simu-iso-cs
 
 This Simulator project measures a complete `pain.001.001.03` file stored as one Hazelcast `IMap` value. It follows
-the `streaming-payments` model and compares two Compact serialization modes against the same generated JAXB model:
+the `streaming-payments` model and compares three Compact serialization modes against the same generated JAXB model:
 
 | Mode | Client config | Map | Serializer |
 | --- | --- | --- | --- |
 | No-code | `client-hazelcast.xml` | `pain001-files-nocode` | Hazelcast reflective no-code Compact |
-| Explicit | `client-hazelcast-explicit.xml` | `pain001-files-explicit` | Explicit serializers for all 66 non-enum generated classes |
+| Generated explicit | `client-hazelcast-explicit.xml` | `pain001-files-explicit` | Direct typed serializers for all 66 non-enum generated classes |
+| Reflective diagnostic | `client-hazelcast-reflective.xml` | `pain001-files-reflective` | Explicitly registered serializers backed by cached reflection |
 
-The explicit serializers use their own `simu-iso-cs.explicit.*` Compact type names. The two schema families and maps
-can therefore coexist in one cluster, so recreating the cluster between modes is not required. The members
+The generated serializers directly invoke JAXB getters/setters and the matching `CompactReader`/`CompactWriter`
+methods. They contain no `Field`, `setAccessible`, or runtime field discovery. The retained reflective implementation
+is diagnostic only; it isolates the Hazelcast 5.7 no-code double-read behaviour from the cost of reflection itself.
+
+The generated and diagnostic serializers use distinct `simu-iso-cs.explicit.*` and
+`simu-iso-cs.reflective.*` Compact type names. All three schema families and maps can therefore coexist in one
+cluster, so recreating the cluster between modes is not required. The members
 intentionally have no explicit serializers registered: these tests use client `set` and `get`, so the member stores
 and returns Compact data without materializing the pain.001 POJO. Serializer selection happens in each Simulator
 client JVM through the suite-specific client configuration.
@@ -21,7 +27,10 @@ The default sample represents the rounded customer maximum:
 - 180 MiB uncompressed XML, based on the customer's approximately 60 MiB per 50,000 transactions
 
 With Hazelcast 5.7.0, the full-fixture verification encodes this object graph as a 157,667,456-byte Compact value
-(about 150.4 MiB), before IMap record metadata and backups.
+(about 150.4 MiB) in all three modes, before IMap record metadata and backups. A local codec-only sanity run measured
+no-code at 0.499/9.229 seconds, reflective-explicit at 0.442/0.419 seconds, and generated-explicit at 0.238/0.205
+seconds for serialization/deserialization. These figures validate the implementation but are not substitutes for the
+GCP IMap benchmark.
 
 Most size filler is held in schema-mapped `RmtInf/Ustrd` values. It therefore remains in the POJO and affects Compact
 serialization instead of merely making the input file larger.
@@ -46,7 +55,7 @@ The XML is decompressed and loaded before warmup, so disk I/O and gzip decompres
 parses, validates, and seeds its keys before timing. The write suite starts with empty keys and populates them during
 warmup. Timed writes use `set`, not `put`.
 
-Writes and reads use separate suites and are never timed concurrently. No-code and explicit modes are also separate
+Writes and reads use separate suites and are never timed concurrently. The three serialization modes are also separate
 suites. Each suite uses one load-generator client and
 offers one complete file operation per second. If `loadgenerator_count` is increased, the configured rate applies to
 each client and therefore multiplies. The combined-rate metronome keeps the suite at one aggregate operation per
@@ -62,7 +71,7 @@ participate, while bounding primary-plus-backup value storage at about 3.5 GiB c
 Compact payload. Setup removes only keys beginning `pain001-benchmark-`, so a previously killed worker cannot leave
 stale test values consuming NATIVE memory. Change `keyCount` only after accounting for the configured capacity.
 
-The same tuning is used for both serialization modes and is deliberately bounded by the current `c2-standard-8`
+The same tuning is used for all serialization modes and is deliberately bounded by the current `c2-standard-8`
 load generator:
 
 | Suite | Threads | Rate | Reason |
@@ -84,8 +93,8 @@ mvn clean verify
 ./scripts/install-simulator-user-lib
 ```
 
-The normal test suite uses small fixtures and verifies that the no-code and explicit schema families coexist. To
-repeat the memory-intensive JAXB and Compact round trip of the full 180 MiB packaged fixture in both modes, run:
+The normal test suite uses small fixtures and verifies that all three schema families coexist. To repeat the
+memory-intensive JAXB and Compact round trip of the full 180 MiB packaged fixture in all modes, run:
 
 ```bash
 mvn -DfullSample=true -Dtest=Pain001FullSampleTest -DargLine=-Xmx4g test
@@ -105,7 +114,7 @@ transaction/payment-info counts and minimum XML size checks remain active.
 | VPC/subnet | Dedicated `raj-iso-cs-network`; nodes/VMs `172.18.0.0/16`, pods `10.20.0.0/16`, services `10.21.0.0/20` |
 | GKE | Three `c2-standard-8` nodes in `asia-south1-a` |
 | Hazelcast | Three Enterprise 5.7.0 members, 4 GiB heap and 12 GiB POOLED native memory each |
-| Maps | `pain001-files-*`, NATIVE, one synchronous backup; suites use separate no-code/explicit maps |
+| Maps | `pain001-files-*`, NATIVE, one synchronous backup; each serialization mode uses a separate map |
 | Management Center | 5.11.0, ClusterIP; use `kubectl port-forward` |
 | Load generator | One `c2-standard-8` Ubuntu VM in the same VPC |
 | Member access | One internal load balancer per member; no public Hazelcast endpoint |
@@ -116,7 +125,7 @@ three nodes to report `Ready` before installing the Hazelcast Helm release.
 
 The load generator receives a public IP only for Simulator installation and SSH control. Its firewall accepts traffic
 only from `SIMULATOR_ADMIN_SOURCE_CIDR`. The playbook renders the gitignored `inventory.yaml` from that public IP and
-rewrites both `client-hazelcast.xml` and `client-hazelcast-explicit.xml` with the three internal member addresses.
+rewrites all three client configurations with the three internal member addresses.
 All-member routing preserves direct partition-owner access for the large values.
 
 NATIVE storage requires Hazelcast Enterprise and a valid license. Compact serialization is performed by the clients,
@@ -171,12 +180,12 @@ Override sizing/location variables with `-e` or environment variables; defaults 
 
 For an environment that was already provisioned by an earlier version of this repository, rerun the same deploy
 playbook once. It is idempotent: it retains the existing `raj-iso-cs` GKE cluster and VMs, updates the Hazelcast map
-configuration to the `pain001-files-*` NATIVE wildcard, and renders both client configurations. Helm may perform a
+configuration to the `pain001-files-*` NATIVE wildcard, and renders all three client configurations. Helm may perform a
 rolling restart of the Hazelcast member pods to apply the map configuration; this is not a GKE cluster recreation.
 
 ## Install Simulator and run
 
-The deploy playbook creates `inventory.yaml` and both client configurations. Once it completes, install Java and
+The deploy playbook creates `inventory.yaml` and all three client configurations. Once it completes, install Java and
 Simulator on the generated load-generator VM. Simulator copies the local `user-lib` during its installation:
 
 ```bash
@@ -187,9 +196,12 @@ perftest run pain001_nocode_write_tests.yaml
 perftest run pain001_nocode_read_tests.yaml
 perftest run pain001_explicit_write_tests.yaml
 perftest run pain001_explicit_read_tests.yaml
+perftest run pain001_reflective_write_tests.yaml
+perftest run pain001_reflective_read_tests.yaml
 ```
 
-Run the four suites one at a time. A cluster restart is not required when switching modes. If benchmark Java, the
+Run the six suites one at a time. Use the reflective pair as a diagnostic rather than the primary explicit-CS result.
+A cluster restart is not required when switching modes. If benchmark Java, the
 explicit serializers, or the packaged sample changes, rebuild, rerun `./scripts/install-simulator-user-lib`, and
 reinstall Simulator on the load-generator host before the next run. YAML-only workload changes do not require
 reinstalling it.
@@ -224,7 +236,8 @@ ansible-playbook k8s/undeploy.yaml
 Confirm teardown finishes successfully to avoid retaining billable resources.
 
 Each write report contains `xmlToPojo`, `pojoSet`, `parseAndSetService`, and `parseAndSet`. Each read report contains
-`pojoGet` and `readPojo`. Compare equivalent probes between the no-code and explicit runs. Use the manual probes for
+`pojoGet` and `readPojo`. Compare equivalent probes between the no-code and generated-explicit runs; use the
+reflective run to attribute the no-code implementation overhead. Use the manual probes for
 actual service time and the automatic probes plus achieved TPS to see whether the offered rate creates a backlog.
 
 ## Regenerate with another shape
@@ -239,4 +252,4 @@ java src/main/java/com/hazelcast/isocs/xml/Pain001SampleGenerator.java \
   --output src/main/resources/samples/customer-maximum.xml.gz
 ```
 
-Change the matching fields in all four suite files when using another sample.
+Change the matching fields in all six suite files when using another sample.

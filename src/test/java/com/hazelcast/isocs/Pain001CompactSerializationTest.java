@@ -9,6 +9,7 @@ import com.hazelcast.isocs.xml.Pain001Parser;
 import com.hazelcast.isocs.xml.Pain001SampleGenerator;
 import com.hazelcast.isocs.xml.SampleXmlLoader;
 import com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers;
+import com.hazelcast.isocs.serialization.Pain001ReflectiveCompactSerializers;
 import com.hz.demo.pmt.pain001_03.Document;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -51,7 +52,7 @@ class Pain001CompactSerializationTest {
     }
 
     @Test
-    void noCodeAndExplicitCompactRoundTripInOneSchemaNamespace() throws Exception {
+    void allCompactModesRoundTripInOneSchemaNamespace() throws Exception {
         Path output = temporaryDirectory.resolve("pain001.xml.gz");
         Pain001SampleGenerator.generate(output, 40, 4, 256 * 1024L);
         Document original = new Pain001Parser().parse(SampleXmlLoader.load(output.toString(), "unused"));
@@ -66,20 +67,34 @@ class Pain001CompactSerializationTest {
                 .setConfig(explicitConfig)
                 .setSchemaService(sharedSchemas)
                 .build();
+        SerializationConfig reflectiveConfig = new SerializationConfig();
+        Pain001ReflectiveCompactSerializers.register(reflectiveConfig.getCompactSerializationConfig());
+        InternalSerializationService reflective = (InternalSerializationService) new DefaultSerializationServiceBuilder()
+                .setConfig(reflectiveConfig)
+                .setSchemaService(sharedSchemas)
+                .build();
         try {
             var noCodeData = noCode.toData(original);
             var explicitData = explicit.toData(original);
+            var reflectiveData = reflective.toData(original);
             Document noCodeRestored = noCode.toObject(noCodeData);
             Document explicitRestored = explicit.toObject(explicitData);
+            Document reflectiveRestored = reflective.toObject(reflectiveData);
 
             assertEquivalentGraph(original, noCodeRestored);
             assertEquivalentGraph(original, explicitRestored);
+            assertEquivalentGraph(original, reflectiveRestored);
             assertNotEquals(noCodeData, explicitData,
                     "the explicit type-name namespace must not collide with no-code Compact schemas");
+            assertNotEquals(noCodeData, reflectiveData,
+                    "the reflective type-name namespace must not collide with no-code Compact schemas");
+            assertNotEquals(explicitData, reflectiveData,
+                    "generated and reflective explicit serializers require distinct type-name namespaces");
             assertTrue(sharedSchemas.size() > 1);
         } finally {
             noCode.dispose();
             explicit.dispose();
+            reflective.dispose();
         }
     }
 

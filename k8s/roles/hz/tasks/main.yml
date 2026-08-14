@@ -126,12 +126,14 @@
     dest: "{{ playbook_dir }}/../{{ item.file }}"
     mode: "0644"
   vars:
-    explicit_compact_serializers: "{{ item.explicit }}"
+    compact_serializer_mode: "{{ item.mode }}"
   loop:
     - file: client-hazelcast.xml
-      explicit: false
+      mode: nocode
     - file: client-hazelcast-explicit.xml
-      explicit: true
+      mode: explicit
+    - file: client-hazelcast-reflective.xml
+      mode: reflective
   tags: [hz, client-config]
 
 - name: Show deployment handoff
@@ -139,6 +141,6 @@
     msg:
       - "Hazelcast members: {{ hazelcast_member_addresses | join(', ') }}"
       - "Simulator load generators: {{ simulator_client_public_addresses | join(', ') }}"
-      - "Rendered client-hazelcast.xml (no-code) and client-hazelcast-explicit.xml (explicit)."
-      - "Run the inventory install steps and then one of the four pain001_*_tests.yaml suites."
+      - "Rendered no-code, generated-explicit, and reflective-explicit client configurations."
+      - "Run the inventory install steps and then one of the six pain001_*_tests.yaml suites."
   tags: [hz, client-config]

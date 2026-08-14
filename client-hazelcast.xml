@@ -7,7 +7,7 @@
     <cluster-name>hz-primary</cluster-name>
     <network>
         <cluster-members>
-            <address>172.18.0.7</address>
+            <address>172.18.0.10</address>
             <address>172.18.0.8</address>
             <address>172.18.0.9</address>
         </cluster-members>
@@ -22,7 +22,8 @@
         <property name="hazelcast.client.invocation.timeout.seconds">120</property>
     </properties>
     <serialization>
-        <compact-serialization/>
+        <compact-serialization>
+        </compact-serialization>
     </serialization>
     <connection-strategy async-start="false" reconnect-mode="ON">
         <connection-retry>
@@ -34,4 +35,3 @@
         </connection-retry>
     </connection-strategy>
 </hazelcast-client>
-

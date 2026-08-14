@@ -1,0 +1,41 @@
+- name: pain001-reflective-write-150k-2k
+  repetitions: 1
+  duration: 120s
+  driver: hazelcast-enterprise5
+  version: maven=5.7.0
+  client_hazelcast_xml: client-hazelcast-reflective.xml
+  loadgenerator_count: 1
+  node_count: 0
+  loadgenerator_hosts: loadgenerators
+  node_hosts: nodes
+  client_args: >
+    -Xms16g
+    -Xmx16g
+    -XX:+UseG1GC
+    -Xlog:gc*:file=gc-reflective-write.log:time,uptime,level,tags:filecount=3,filesize=32M
+    --add-modules java.se
+    --add-exports java.base/jdk.internal.ref=ALL-UNNAMED
+    --add-opens java.base/java.lang=ALL-UNNAMED
+    --add-opens java.base/sun.nio.ch=ALL-UNNAMED
+    --add-opens java.management/sun.management=ALL-UNNAMED
+    --add-opens jdk.management/com.sun.management.internal=ALL-UNNAMED
+  performance_monitor_interval_seconds: 1
+  verify_enabled: true
+  warmup_seconds: 30
+  cooldown_seconds: 0
+  test:
+    - class: com.hazelcast.isocs.benchmark.Pain001WriteBenchmark
+      name: pain001reflectiveWrite
+      mapName: pain001-files-reflective
+      sampleResource: samples/pain001-150k-2k-180MiB.xml.gz
+      expectedTransactions: 150_000
+      expectedPaymentInfos: 2_000
+      minimumXmlSizeMiB: 175
+      keyCount: 12
+      cleanupStaleKeysOnSetup: true
+      cleanupKeysOnExit: true
+      # Six threads provide scheduling headroom at one complete file per second.
+      threadCount: 6
+      ratePerSecond: 1
+      metronomeClass: com.hazelcast.simulator.worker.metronome.ConstantCombinedRateMetronome
+

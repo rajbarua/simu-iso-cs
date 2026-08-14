@@ -8,6 +8,7 @@ import com.hazelcast.internal.serialization.impl.compact.SchemaService;
 import com.hazelcast.isocs.xml.Pain001Parser;
 import com.hazelcast.isocs.xml.SampleXmlLoader;
 import com.hazelcast.isocs.serialization.Pain001ExplicitCompactSerializers;
+import com.hazelcast.isocs.serialization.Pain001ReflectiveCompactSerializers;
 import com.hz.demo.pmt.pain001_03.Document;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
@@ -38,17 +39,27 @@ class Pain001FullSampleTest {
                 .setConfig(explicitConfig)
                 .setSchemaService(new InMemorySchemaService())
                 .build();
+        SerializationConfig reflectiveConfig = new SerializationConfig();
+        Pain001ReflectiveCompactSerializers.register(reflectiveConfig.getCompactSerializationConfig());
+        InternalSerializationService reflective = (InternalSerializationService) new DefaultSerializationServiceBuilder()
+                .setConfig(reflectiveConfig)
+                .setSchemaService(new InMemorySchemaService())
+                .build();
         try {
-            runRoundTrip("no-code", noCode, original, xml.length, parseNanos);
-            runRoundTrip("explicit", explicit, original, xml.length, parseNanos);
+            int noCodeBytes = runRoundTrip("no-code", noCode, original, xml.length, parseNanos);
+            int reflectiveBytes = runRoundTrip("reflective-explicit", reflective, original, xml.length, parseNanos);
+            int explicitBytes = runRoundTrip("generated-explicit", explicit, original, xml.length, parseNanos);
+            assertEquals(noCodeBytes, reflectiveBytes, "reflective payload must represent the same graph");
+            assertEquals(noCodeBytes, explicitBytes, "generated payload must represent the same graph");
         } finally {
             noCode.dispose();
             explicit.dispose();
+            reflective.dispose();
         }
     }
 
-    private static void runRoundTrip(String mode, InternalSerializationService serializationService,
-                                     Document original, int xmlBytes, long parseNanos) {
+    private static int runRoundTrip(String mode, InternalSerializationService serializationService,
+                                    Document original, int xmlBytes, long parseNanos) {
         long serializeStarted = System.nanoTime();
         var data = serializationService.toData(original);
         long serializeNanos = System.nanoTime() - serializeStarted;
@@ -63,6 +74,7 @@ class Pain001FullSampleTest {
                 "Full sample (%s): XML=%,d bytes, Compact=%,d bytes, parse=%.3f s, serialize=%.3f s, deserialize=%.3f s%n",
                 mode, xmlBytes, data.totalSize(), parseNanos / 1_000_000_000.0,
                 serializeNanos / 1_000_000_000.0, deserializeNanos / 1_000_000_000.0);
+        return data.totalSize();
     }
 
     private static void assertDocumentShape(Document document) {

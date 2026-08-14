@@ -4,12 +4,12 @@
             http://www.hazelcast.com/schema/config/hazelcast-client-config-5.7.xsd"
         xmlns="http://www.hazelcast.com/schema/client-config"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-    <cluster-name>{{ hazelcast_helm_release_name }}</cluster-name>
+    <cluster-name>hz-primary</cluster-name>
     <network>
         <cluster-members>
-{% for address in hazelcast_member_addresses %}
-            <address>{{ address }}</address>
-{% endfor %}
+            <address>172.18.0.10</address>
+            <address>172.18.0.8</address>
+            <address>172.18.0.9</address>
         </cluster-members>
         <cluster-routing mode="ALL_MEMBERS"/>
         <redo-operation>true</redo-operation>
@@ -23,76 +23,6 @@
     </properties>
     <serialization>
         <compact-serialization>
-{% if compact_serializer_mode == 'explicit' %}
-            <serializers>
-                <serializer>com.hazelcast.isocs.serialization.generated.AccountIdentification4ChoiceCS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.AccountSchemeName1ChoiceCS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.ActiveOrHistoricCurrencyAndAmountCS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.AmountType3ChoiceCS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.Authorisation1ChoiceCS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.BranchAndFinancialInstitutionIdentification4CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.BranchData2CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.CashAccount16CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.CashAccountType2CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.CategoryPurpose1ChoiceCS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.Cheque6CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.ChequeDeliveryMethod1ChoiceCS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.ClearingSystemIdentification2ChoiceCS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.ClearingSystemMemberIdentification2CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.ContactDetails2CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.CreditTransferTransactionInformation10CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.CreditorReferenceInformation2CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.CreditorReferenceType1ChoiceCS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.CreditorReferenceType2CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.CustomerCreditTransferInitiationV03CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.DateAndPlaceOfBirthCS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.DatePeriodDetailsCS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.DocumentCS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.DocumentAdjustment1CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.EquivalentAmount2CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.ExchangeRateInformation1CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.FinancialIdentificationSchemeName1ChoiceCS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.FinancialInstitutionIdentification7CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.GenericAccountIdentification1CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.GenericFinancialIdentification1CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.GenericOrganisationIdentification1CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.GenericPersonIdentification1CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.GroupHeader32CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.InstructionForCreditorAgent1CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.LocalInstrument2ChoiceCS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.NameAndAddress10CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.OrganisationIdentification4CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.OrganisationIdentificationSchemeName1ChoiceCS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.Party6ChoiceCS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.PartyIdentification32CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.PaymentIdentification1CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.PaymentInstructionInformation3CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.PaymentTypeInformation19CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.PersonIdentification5CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.PersonIdentificationSchemeName1ChoiceCS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.PostalAddress6CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.Purpose2ChoiceCS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.ReferredDocumentInformation3CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.ReferredDocumentType1ChoiceCS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.ReferredDocumentType2CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.RegulatoryAuthority2CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.RegulatoryReporting3CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.RemittanceAmount1CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.RemittanceInformation5CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.RemittanceLocation2CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.ServiceLevel8ChoiceCS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.StructuredRegulatoryReporting3CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.StructuredRemittanceInformation7CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.TaxAmount1CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.TaxAuthorisation1CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.TaxInformation3CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.TaxParty1CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.TaxParty2CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.TaxPeriod1CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.TaxRecord1CS</serializer>
-                <serializer>com.hazelcast.isocs.serialization.generated.TaxRecordDetails1CS</serializer>
-            </serializers>
-{% elif compact_serializer_mode == 'reflective' %}
             <serializers>
                 <serializer>com.hazelcast.isocs.serialization.Pain001ReflectiveCompactSerializers$AccountIdentification4ChoiceCS</serializer>
                 <serializer>com.hazelcast.isocs.serialization.Pain001ReflectiveCompactSerializers$AccountSchemeName1ChoiceCS</serializer>
@@ -161,7 +91,6 @@
                 <serializer>com.hazelcast.isocs.serialization.Pain001ReflectiveCompactSerializers$TaxRecord1CS</serializer>
                 <serializer>com.hazelcast.isocs.serialization.Pain001ReflectiveCompactSerializers$TaxRecordDetails1CS</serializer>
             </serializers>
-{% endif %}
         </compact-serialization>
     </serialization>
     <connection-strategy async-start="false" reconnect-mode="ON">
