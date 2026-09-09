@@ -2,8 +2,7 @@ loadgenerators:
   hosts:
     LOAD_GENERATOR_IP:
       ssh_user: ubuntu
-      ssh_options: -i /Users/raj/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=60
+      ssh_options: -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=60
   vars:
     ansible_user: ubuntu
     ansible_ssh_private_key_file: ~/.ssh/id_ed25519
-

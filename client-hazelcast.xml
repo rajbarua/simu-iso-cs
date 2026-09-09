@@ -7,9 +7,10 @@
     <cluster-name>hz-primary</cluster-name>
     <network>
         <cluster-members>
-            <address>172.18.0.10</address>
-            <address>172.18.0.8</address>
-            <address>172.18.0.9</address>
+            <!-- Documentation-only addresses; k8s/deploy.yaml renders the deployed member addresses. -->
+            <address>192.0.2.10</address>
+            <address>192.0.2.11</address>
+            <address>192.0.2.12</address>
         </cluster-members>
         <cluster-routing mode="ALL_MEMBERS"/>
         <redo-operation>true</redo-operation>

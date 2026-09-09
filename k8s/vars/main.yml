@@ -1,6 +1,6 @@
 ---
-# GCP location and identity. Environment variables override the demo defaults.
-project_id: "{{ lookup('env', 'GCP_PROJECT_ID') | default('solution-architects-415712', true) }}"
+# GCP location and identity. GCP_PROJECT_ID is required; location variables have benchmark defaults.
+project_id: "{{ lookup('env', 'GCP_PROJECT_ID') }}"
 zone: "{{ lookup('env', 'GCP_ZONE') | default('asia-south1-a', true) }}"
 region: "{{ lookup('env', 'GCP_REGION') | default('asia-south1', true) }}"
 credentials_file: "{{ lookup('env', 'GOOGLE_APPLICATION_CREDENTIALS') | default(lookup('env', 'HOME') + '/gcp/credentials.json', true) }}"
@@ -10,9 +10,8 @@ simulator_admin_source_cidr: "{{ lookup('env', 'SIMULATOR_ADMIN_SOURCE_CIDR') }}
 ssh_pub_key_path: "{{ lookup('env', 'ISO_CS_SSH_PUB_KEY') | default(lookup('env', 'HOME') + '/.ssh/id_ed25519.pub', true) }}"
 ssh_private_key_path: "{{ lookup('env', 'ISO_CS_SSH_PRIVATE_KEY') | default(lookup('env', 'HOME') + '/.ssh/id_ed25519', true) }}"
 
-# Dedicated VPC keeps this benchmark independent from simu-dedup.
-# Preserve the deployed GCP resource identity; changing this would create a second cluster.
-cluster_name: "raj-iso-cs"
+# Dedicated VPC keeps this benchmark isolated from other workloads.
+cluster_name: "simu-iso-cs"
 network_name: "{{ cluster_name }}-network"
 subnet_cidr: "172.18.0.0/16"
 gke_pod_range_name: "{{ cluster_name }}-pods"
@@ -25,7 +24,7 @@ gke_node_disk_size_gb: 30
 gke_node_disk_type: "pd-balanced"
 
 # One Simulator worker is the default one-file-per-second benchmark source.
-client_machine_name: "raj-iso-cs-client"
+client_machine_name: "simu-iso-cs-client"
 client_machine_count: 1
 client_machine_type: "c2-standard-8"
 client_machine_username: "ubuntu"
@@ -35,7 +34,7 @@ hazelcast_namespace: "default"
 primary_cluster_size: 3
 hazelcast_helm_release_name: "hz-primary"
 hazelcast_helm_chart_version: "5.15.0"
-hazelcast_version: "5.7.0"
+hazelcast_version: "5.7.1"
 hazelcast_mc_version: "5.11.0"
 hazelcast_kubectl_image: "alpine/k8s:1.33.4"
 hazelcast_license_secret_name: "hazelcast-license"

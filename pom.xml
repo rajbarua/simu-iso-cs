@@ -12,7 +12,7 @@
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <hazelcast.version>5.7.0</hazelcast.version>
+        <hazelcast.version>5.7.1</hazelcast.version>
         <hazelcast.simulator.version>2.0-SNAPSHOT</hazelcast.simulator.version>
         <jaxb.version>4.0.4</jaxb.version>
         <junit.version>5.11.4</junit.version>
@@ -32,6 +32,13 @@
             <artifactId>driver-hazelcast4plus</artifactId>
             <version>${hazelcast.simulator.version}</version>
             <scope>provided</scope>
+            <exclusions>
+                <!-- This benchmark does not use the optional private PRS demo dependency. -->
+                <exclusion>
+                    <groupId>com.hz.demo</groupId>
+                    <artifactId>prs</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.hazelcast.simulator</groupId>

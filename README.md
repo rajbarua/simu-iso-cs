@@ -1,7 +1,7 @@
 # simu-iso-cs
 
-This Simulator project measures a complete `pain.001.001.03` file stored as one Hazelcast `IMap` value. It follows
-the `streaming-payments` model and compares three Compact serialization modes against the same generated JAXB model:
+This Simulator project measures a complete `pain.001.001.03` file stored as one Hazelcast `IMap` value. It compares
+three Compact serialization modes against the same generated JAXB model:
 
 | Mode | Client config | Map | Serializer |
 | --- | --- | --- | --- |
@@ -11,7 +11,8 @@ the `streaming-payments` model and compares three Compact serialization modes ag
 
 The generated serializers directly invoke JAXB getters/setters and the matching `CompactReader`/`CompactWriter`
 methods. They contain no `Field`, `setAccessible`, or runtime field discovery. The retained reflective implementation
-is diagnostic only; it isolates the Hazelcast 5.7 no-code double-read behaviour from the cost of reflection itself.
+is diagnostic only; it distinguishes generated accessor cost from cached reflection and preserves a comparison point
+for the no-code behaviour observed before Hazelcast 5.7.1.
 
 The generated and diagnostic serializers use distinct `simu-iso-cs.explicit.*` and
 `simu-iso-cs.reflective.*` Compact type names. All three schema families and maps can therefore coexist in one
@@ -20,17 +21,17 @@ intentionally have no explicit serializers registered: these tests use client `s
 and returns Compact data without materializing the pain.001 POJO. Serializer selection happens in each Simulator
 client JVM through the suite-specific client configuration.
 
-The default sample represents the rounded customer maximum:
+The default sample represents a deliberately demanding benchmark workload:
 
 - 150,000 `CdtTrfTxInf` transactions
 - 2,000 `PmtInf` blocks (75 transactions each)
-- 180 MiB uncompressed XML, based on the customer's approximately 60 MiB per 50,000 transactions
+- 180 MiB uncompressed XML
 
-With Hazelcast 5.7.0, the full-fixture verification encodes this object graph as a 157,667,456-byte Compact value
-(about 150.4 MiB) in all three modes, before IMap record metadata and backups. A local codec-only sanity run measured
-no-code at 0.499/9.229 seconds, reflective-explicit at 0.442/0.419 seconds, and generated-explicit at 0.238/0.205
-seconds for serialization/deserialization. These figures validate the implementation but are not substitutes for the
-GCP IMap benchmark.
+With Hazelcast 5.7.1, the full-fixture verification encodes this object graph as a 157,667,456-byte Compact value
+(about 150.4 MiB) in all three modes, before IMap record metadata and backups. A local codec-only validation measured
+no-code at 0.563/0.823 seconds, reflective-explicit at 0.463/0.367 seconds, and generated-explicit at 0.290/0.294
+seconds for serialization/deserialization. XML parsing took 1.751 seconds. These figures validate the implementation
+but are not substitutes for the GCP IMap benchmark.
 
 Most size filler is held in schema-mapped `RmtInf/Ustrd` values. It therefore remains in the POJO and affects Compact
 serialization instead of merely making the input file larger.
@@ -84,8 +85,7 @@ If the isolated read run cannot sustain 1/sec, resize the load-generator VM befo
 
 ## Build and prepare the sample
 
-Java 21, Maven, and the locally built Hazelcast Simulator `2.0-SNAPSHOT` artifacts are expected, matching
-`simu-dedup`.
+Java 21, Maven, and locally built Hazelcast Simulator `2.0-SNAPSHOT` artifacts are expected.
 
 ```bash
 ./scripts/generate-sample
@@ -111,9 +111,9 @@ transaction/payment-info counts and minimum XML size checks remain active.
 
 | Component | Default |
 | --- | --- |
-| VPC/subnet | Dedicated `raj-iso-cs-network`; nodes/VMs `172.18.0.0/16`, pods `10.20.0.0/16`, services `10.21.0.0/20` |
+| VPC/subnet | Dedicated `simu-iso-cs-network`; nodes/VMs `172.18.0.0/16`, pods `10.20.0.0/16`, services `10.21.0.0/20` |
 | GKE | Three `c2-standard-8` nodes in `asia-south1-a` |
-| Hazelcast | Three Enterprise 5.7.0 members, 4 GiB heap and 12 GiB POOLED native memory each |
+| Hazelcast | Three Enterprise 5.7.1 members, 4 GiB heap and 12 GiB POOLED native memory each |
 | Maps | `pain001-files-*`, NATIVE, one synchronous backup; each serialization mode uses a separate map |
 | Management Center | 5.11.0, ClusterIP; use `kubectl port-forward` |
 | Load generator | One `c2-standard-8` Ubuntu VM in the same VPC |
@@ -138,7 +138,7 @@ Prerequisites:
 
 - `gcloud`, the GKE auth plugin, `kubectl`, Helm, Ansible, Java 21, and Maven
 - a GCP project with the Compute Engine (`compute.googleapis.com`) and Kubernetes Engine
-  (`container.googleapis.com`) APIs already enabled, matching the `simu-dedup` setup
+  (`container.googleapis.com`) APIs already enabled
 - a service account allowed to manage VPCs, firewalls, VMs, GKE, load balancers, and Kubernetes resources
 - its JSON key at `~/gcp/credentials.json`, or `GOOGLE_APPLICATION_CREDENTIALS`
 - a Hazelcast Enterprise license in `HAZELCAST_LICENSE_KEY` or `~/hazelcast/demo.license`
@@ -148,7 +148,7 @@ Install the Ansible collections and identify the operator workstation with a nar
 
 ```bash
 ansible-galaxy collection install -r requirements.yml
-export GCP_PROJECT_ID=solution-architects-415712
+export GCP_PROJECT_ID="your-gcp-project-id"
 export SIMULATOR_ADMIN_SOURCE_CIDR="$(curl -4 -s https://checkip.amazonaws.com)/32"
 echo "$SIMULATOR_ADMIN_SOURCE_CIDR"
 ```
@@ -179,7 +179,7 @@ The deployment is intentionally not executed by a build or test. Running the pla
 Override sizing/location variables with `-e` or environment variables; defaults live in `k8s/vars/main.yml`.
 
 For an environment that was already provisioned by an earlier version of this repository, rerun the same deploy
-playbook once. It is idempotent: it retains the existing `raj-iso-cs` GKE cluster and VMs, updates the Hazelcast map
+playbook once. It is idempotent: it retains the existing `simu-iso-cs` GKE cluster and VMs, updates the Hazelcast map
 configuration to the `pain001-files-*` NATIVE wildcard, and renders all three client configurations. Helm may perform a
 rolling restart of the Hazelcast member pods to apply the map configuration; this is not a GKE cluster recreation.
 
@@ -189,7 +189,7 @@ The deploy playbook creates `inventory.yaml` and all three client configurations
 Simulator on the generated load-generator VM. Simulator copies the local `user-lib` during its installation:
 
 ```bash
-source /Users/raj/src/hazelcast-simulator/.venv/bin/activate
+source "$HOME/src/hazelcast-simulator/.venv/bin/activate"
 inventory install java --hosts loadgenerators
 inventory install simulator --hosts loadgenerators
 perftest run pain001_nocode_write_tests.yaml
@@ -249,7 +249,13 @@ java src/main/java/com/hazelcast/isocs/xml/Pain001SampleGenerator.java \
   --transactions 143687 \
   --payment-infos 1990 \
   --target-mib 180 \
-  --output src/main/resources/samples/customer-maximum.xml.gz
+  --output src/main/resources/samples/benchmark-maximum.xml.gz
 ```
 
 Change the matching fields in all six suite files when using another sample.
+
+## License and ISO 20022 attribution
+
+The original code in this repository is licensed under the Apache License 2.0. The bundled
+`pain.001.001.03` schema is ISO 20022 repository material and is not relicensed under Apache-2.0.
+See `NOTICE` for its source, applicable terms, and the authoritative ISO 20022 website.

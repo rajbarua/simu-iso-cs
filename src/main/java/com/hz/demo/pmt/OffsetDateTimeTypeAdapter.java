@@ -4,7 +4,7 @@ import jakarta.xml.bind.annotation.adapters.XmlAdapter;
 
 import java.time.OffsetDateTime;
 
-/** Matches the date/time binding used by streaming-payments. */
+/** JAXB adapter used by the generated ISO 20022 model. */
 public final class OffsetDateTimeTypeAdapter extends XmlAdapter<String, OffsetDateTime> {
     @Override
     public OffsetDateTime unmarshal(String value) {
@@ -16,4 +16,3 @@ public final class OffsetDateTimeTypeAdapter extends XmlAdapter<String, OffsetDa
         return value.toString();
     }
 }
-

@@ -1,0 +1,15 @@
+simu-iso-cs
+
+This product includes the pain.001.001.03 XML Schema from the ISO 20022
+Financial Repository.
+
+Authoritative source: https://www.iso20022.org/
+Message catalogue: https://www.iso20022.org/iso-20022-message-definitions
+Previous message versions: https://www.iso20022.org/catalogue-messages/iso-20022-messages-archive
+Terms of use: https://www.iso20022.org/terms-use
+Intellectual property rights policy: https://www.iso20022.org/intellectual-property-rights
+
+The ISO 20022 schema is repository material governed by the applicable ISO
+20022 terms and intellectual-property policy. It is not relicensed under the
+Apache License 2.0. This project is not an official or authoritative source of
+ISO 20022 material; consult https://www.iso20022.org/ for current definitions.

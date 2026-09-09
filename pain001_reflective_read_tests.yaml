@@ -2,7 +2,7 @@
   repetitions: 1
   duration: 120s
   driver: hazelcast-enterprise5
-  version: maven=5.7.0
+  version: maven=5.7.1
   client_hazelcast_xml: client-hazelcast-reflective.xml
   loadgenerator_count: 1
   node_count: 0

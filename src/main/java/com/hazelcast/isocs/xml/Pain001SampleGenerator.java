@@ -135,11 +135,11 @@ public final class Pain001SampleGenerator {
         writer.write("      <NbOfTxs>" + count + "</NbOfTxs>\n");
         writer.write("      <CtrlSum>" + count + ".00</CtrlSum>\n");
         writer.write("      <PmtTpInf><SvcLvl><Cd>SEPA</Cd></SvcLvl></PmtTpInf>\n");
-        // streaming-payments binds xs:date to OffsetDateTime, so this intentionally carries an offset.
+        // The JAXB binding maps xs:date to OffsetDateTime, so this intentionally carries an offset.
         writer.write("      <ReqdExctnDt>2026-08-08T00:00:00Z</ReqdExctnDt>\n");
         writer.write("      <Dbtr><Nm>Benchmark Sender</Nm></Dbtr>\n");
-        writer.write("      <DbtrAcct><Id><IBAN>DE89370400440532013000</IBAN></Id></DbtrAcct>\n");
-        writer.write("      <DbtrAgt><FinInstnId><BIC>DEUTDEFF</BIC></FinInstnId></DbtrAgt>\n");
+        writer.write("      <DbtrAcct><Id><IBAN>ZZ00SENDER000000000000000001</IBAN></Id></DbtrAcct>\n");
+        writer.write("      <DbtrAgt><FinInstnId><BIC>SENDZZZZ</BIC></FinInstnId></DbtrAgt>\n");
     }
 
     private static void writeTransaction(BufferedWriter writer, int transaction, int fillerChars) throws IOException {
@@ -147,9 +147,9 @@ public final class Pain001SampleGenerator {
         writer.write("      <CdtTrfTxInf>\n");
         writer.write("        <PmtId><EndToEndId>TX" + id + "</EndToEndId></PmtId>\n");
         writer.write("        <Amt><InstdAmt Ccy=\"EUR\">1.00</InstdAmt></Amt>\n");
-        writer.write("        <CdtrAgt><FinInstnId><BIC>BNPAFRPP</BIC></FinInstnId></CdtrAgt>\n");
+        writer.write("        <CdtrAgt><FinInstnId><BIC>RECVZZZZ</BIC></FinInstnId></CdtrAgt>\n");
         writer.write("        <Cdtr><Nm>Receiver " + id + "</Nm></Cdtr>\n");
-        writer.write("        <CdtrAcct><Id><IBAN>FR76300060000112345678900001</IBAN></Id></CdtrAcct>\n");
+        writer.write("        <CdtrAcct><Id><IBAN>ZZ00RECEIVER0000000000000001</IBAN></Id></CdtrAcct>\n");
         if (fillerChars > 0) {
             writer.write(RMT_START);
             int remaining = fillerChars;

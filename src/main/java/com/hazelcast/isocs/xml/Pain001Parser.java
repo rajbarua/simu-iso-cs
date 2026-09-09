@@ -8,7 +8,7 @@ import jakarta.xml.bind.Unmarshaller;
 
 import java.io.ByteArrayInputStream;
 
-/** JAXB parser equivalent to the pain.001.001.03 parser in streaming-payments. */
+/** JAXB parser for the generated pain.001.001.03 model. */
 public final class Pain001Parser {
     private static final String MODEL_PACKAGE = "com.hz.demo.pmt.pain001_03";
 
@@ -35,4 +35,3 @@ public final class Pain001Parser {
         }
     }
 }
-
